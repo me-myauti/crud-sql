@@ -16,6 +16,7 @@ model Usuario{
   cpf String
   senha String
   contato String
+  admin Boolean
 }
 
 model Empresa{

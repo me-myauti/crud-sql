@@ -1,19 +1,21 @@
 const express = require("express")
-const allUsers = [{name:  "Teste"}]
 const myRoutes = express.Router()
 
 const {PrismaClient} = require("@prisma/client")
 
 const prisma = new PrismaClient();
-
 // Create
 myRoutes.post("/createUser", async (req, res) => {
-    const { nome, cpf, senha, contato} = req.body
+    const {nome, cpf, senha, contato, admin} = req.body
+    if(!nome || !cpf || !senha || !contato){
+        return res.status(400).json({err: "Data is missing, check your fields!"})
+    }
     const user = await prisma.Usuario.create({data:{
         nome,
         cpf,
         senha,
-        contato
+        contato,
+        admin
     }})
     //allUsers.push({name})
     return res.status(201).json(user)
@@ -35,8 +37,9 @@ myRoutes.post("/createCustomer", async(req, res)=>{
 })
 
 //Read
-myRoutes.get("/listUsers",  (req, res)=>{
-    return res.status(200).json(allUsers)
+myRoutes.get("/listUsers",  async (req, res)=>{
+    const users = await prisma.Usuario.findMany()
+    return res.status(200).json(users)
 })
 
 module.exports = myRoutes
