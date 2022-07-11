@@ -1,6 +1,8 @@
 const express = require("express");
+require('dotenv').config()
 const myRoutes = express.Router();
 const bcrypt = require("bcrypt");
+const jwt = require("jsonwebtoken");
 
 const { PrismaClient } = require("@prisma/client");
 
@@ -25,7 +27,11 @@ function verifyIfDataExists(data) {
 
 //Verify If User Exists
 function verifyIfUserExists(user){
-    console.log(user)
+    if(!user){
+        return false;
+    }else{
+        return true;
+    }
 }
 
 //Login
@@ -34,25 +40,25 @@ myRoutes.post("/authenticateUser", async (req, res) => {
     const data = verifyIfDataExists(Object.entries(userData))
     if(!data){
         return res.status(400).json({ err: "Data is missing, check your fields!" });
-    }else{
-
     }
-
-    const userLoggedIn = await prisma.Usuario.findMany({
+    const userLoggedIn = await prisma.Usuario.findUnique({
         where: {
         cpf: cpf,
         },
     });
 
-    verifyIfUserExists(userLoggedIn)
+    const user = verifyIfUserExists(userLoggedIn)
+    if(!user){
+        return res.status(400).json({ err: "User not found!" });
+    }
 
-  /* if (userLoggedIn == "" || !userLoggedIn) {
-    return res.status(401).json({ err: "Invalid credentials" });
-  }
-  if (userLoggedIn[0].senha != senha) {
-    return res.status(401).json({ err: "Invalid credentials" });
-  }
-  return res.status(201).json(userLoggedIn[0]); */
+    const pswdIsOk = await bcrypt.compare(senha, userLoggedIn.senha)
+    if(!pswdIsOk){
+        return res.status(400).json({ err: "Invalid credentials!" });
+    }
+    const secret = process.env.SECRET
+    let token = jwt.sign(userLoggedIn.id, secret)
+    return res.status(200).json({uuid: token})
 });
 
 
