@@ -13,16 +13,16 @@ datasource db {
 model Usuario{
   id Int @id @default(autoincrement())
   nome String
-  cpf String
+  cpf String @db.VarChar(11) @unique
   senha String
   contato String
-  admin Boolean
+  isAdmin Boolean @default(false)
 }
 
 model Empresa{
   id Int @id @default(autoincrement())
   titular String
-  cnpj String
+  cnpj String @db.VarChar(14) @unique
   email_hospedagem String
   senha_hospedagem String
   email_empresa String
