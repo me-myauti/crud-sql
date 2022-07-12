@@ -49,7 +49,7 @@ myRoutes.post("/authenticateUser", async (req, res) => {
 
     const user = verifyIfUserExists(userLoggedIn)
     if(!user){
-        return res.status(400).json({ err: "User not found!" });
+        return res.status(400).json({ err: "Invalid credentials!" });
     }
 
     const pswdIsOk = await bcrypt.compare(senha, userLoggedIn.senha)
@@ -58,10 +58,9 @@ myRoutes.post("/authenticateUser", async (req, res) => {
     }
     const secret = process.env.SECRET
     let token = jwt.sign(userLoggedIn.id, secret)
-    return res.status(200).json({uuid: token})
+    res.cookie('token', token, {httpOnly: true})
+    return res.status(200).json({flag: "ok"})
 });
-
-
 
 // Create
 myRoutes.post("/createUser", async (req, res) => {
@@ -129,17 +128,6 @@ myRoutes.get("/listUsers", async (req, res) => {
 myRoutes.get("/listCustomers", async (req, res) => {
   const customers = await prisma.Empresa.findMany();
   return res.status(200).json(customers);
-});
-
-//Update
-
-myRoutes.post("/updateUsers", async (req, res) => {
-  const { id, nome, cpf, senha, contato } = req.body;
-  const updateUser = await prisma.Usuario.update({
-    where: {
-      id: id,
-    },
-  });
 });
 
 module.exports = myRoutes;
