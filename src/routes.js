@@ -178,4 +178,23 @@ myRoutes.get("/listLoggedUser", checkToken, async(req, res)=>{
   return res.status(200).json(user)
 })
 
+
+//delete
+myRoutes.post("/deleteUser", async (req,res)=>{
+  const { id } = req.body
+  console.log(id)
+  if(id){
+    const deleteUser = await prisma.Empresa.delete({
+      where: {
+        "id": id
+      },
+    })
+    if(deleteUser){
+      return res.status(200).json({deleteUser})
+    }else{
+      return res.status(400)
+    }
+  }
+})
+
 module.exports = myRoutes;
