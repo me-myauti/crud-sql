@@ -34,6 +34,22 @@ function verifyIfUserExists(user){
     }
 }
 
+//Check Token Middleware
+function checkToken(req, res, next){
+  const authHeader = req.headers['authorization']
+  const token = authHeader && authHeader.split(" ")[1]
+  if(!token){
+    return res.status(401).json({err: "Acesso negado!"})
+  }
+  try {
+    const secret = process.env.SECRET
+    jwt.verify(token, secret)
+    next()
+  } catch (err) {
+    res.status(400).json({err: "Token inválido!"})
+  }
+}
+
 //Login
 myRoutes.post("/authenticateUser", async (req, res) => {
     const userData = { cpf, senha } = req.body;
@@ -58,17 +74,19 @@ myRoutes.post("/authenticateUser", async (req, res) => {
     }
     const secret = process.env.SECRET
     let token = jwt.sign(userLoggedIn.id, secret)
-    res.cookie('token', token, {httpOnly: true})
-    return res.status(200).json({flag: "ok"})
+    res.cookie('token', token)
+    return res.status(200).json({flag: "ok", token: token})
 });
 
 // Create
 myRoutes.post("/createUser", async (req, res) => {
   const userData = ({ nome, cpf, senha, contato, admin } = req.body);
   const data = verifyIfDataExists(Object.entries(userData));
-
+  if(userData.cpf.length != 11){
+    return res.status(400).json({err: "CPF inválido"})
+  }
   if (!data) {
-    return res.status(400).json({ err: "Missing fields, try again!" });
+    return res.status(400).json({ err: "Campos faltando, tente novamente!" });
   } else {
     const salt = await bcrypt.genSalt(12);
     const pswdhash = await bcrypt.hash(senha, salt);
@@ -98,11 +116,26 @@ myRoutes.post("/createCustomer", async (req, res) => {
     contato,
   } = req.body);
 
+  
   const data = verifyIfDataExists(Object.entries(userData));
 
   if (!data) {
-    return res.status(400).json({ err: "Data is missing" });
+    return res.status(400).json({ err: "Campos faltando! Por favor, preencha novamente!" });
   } else {
+    if(userData.cnpj.length != 14){
+      return res.status(400).json({err: "CNPJ inválido"})
+    }
+
+    const cnpjExists = await prisma.Empresa.findUnique({
+      where: {
+        cnpj: cnpj
+      }
+    })
+
+    if(cnpjExists){
+      return res.status(400).json({err: "Este CNPJ já está cadastrado!"}) 
+    }
+
     const customer = await prisma.Empresa.create({
       data: {
         titular,
@@ -129,5 +162,20 @@ myRoutes.get("/listCustomers", async (req, res) => {
   const customers = await prisma.Empresa.findMany();
   return res.status(200).json(customers);
 });
+
+myRoutes.get("/listLoggedUser", checkToken, async(req, res)=>{
+  const secret = process.env.SECRET
+  const decoded = jwt.verify(req.cookies.token, secret)
+  if(!decoded){
+    return res.status(403).json({err: "Não foi possível decodificar o token"})
+  }
+  const decodedToInt = parseInt(decoded)
+  const user = await prisma.Usuario.findUnique({
+    where: {
+      id: decodedToInt
+    }
+  })
+  return res.status(200).json(user)
+})
 
 module.exports = myRoutes;
